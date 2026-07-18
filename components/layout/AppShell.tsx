@@ -16,8 +16,8 @@ export default function AppShell({ children }: AppShellProps) {
     <div className="flex flex-col h-screen">
       <Navbar onToggleSidebar={() => setCollapsed((prev) => !prev)} />
       <div className="flex flex-1 overflow-hidden">
-        <Sidebar collapsed={collapsed} />
-        <main className="flex-1 overflow-y-auto p-6 bg-black">
+        <Sidebar collapsed={collapsed} onClose={() => setCollapsed(true)} />
+        <main className="flex-1 overflow-y-auto p-4 sm:p-6 bg-black">
           {children}
         </main>
       </div>
