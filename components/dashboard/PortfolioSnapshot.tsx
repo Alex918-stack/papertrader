@@ -1,8 +1,10 @@
 "use client";
 
+import { useEffect } from "react";
 import Link from "next/link";
 import { usePortfolio } from "@/lib/PortfolioContext";
 import { useStockQuotes } from "@/hooks/useStockQuotes";
+import { recordPoint } from "@/lib/priceHistory";
 
 export default function PortfolioSnapshot() {
   const { cash, holdings } = usePortfolio();
@@ -15,19 +17,21 @@ export default function PortfolioSnapshot() {
   }, 0);
   const totalValue = cash + holdingsValue;
 
+  useEffect(() => {
+    if (!loading) {
+      recordPoint("portfolio-total", totalValue);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [totalValue, loading]);
+
   return (
-    <div className="bg-neutral-900 border border-neutral-800 rounded-lg p-4">
-      <div className="flex justify-between items-center mb-3">
-        <h2 className="text-lg font-semibold text-neutral-100">
-          Portfolio Snapshot
-        </h2>
-        <Link
-          href="/portfolio"
-          className="text-xs text-emerald-400 hover:text-emerald-300"
-        >
-          View details →
-        </Link>
-      </div>
+    <Link
+      href="/portfolio"
+      className="block bg-neutral-900 border border-neutral-800 rounded-lg p-4 hover:bg-neutral-950 hover:border-neutral-700 transition-colors cursor-pointer"
+    >
+      <h2 className="text-lg font-semibold text-neutral-100 mb-3">
+        Portfolio Snapshot
+      </h2>
       <div className="flex justify-between text-sm">
         <div>
           <p className="text-neutral-500">Total Value</p>
@@ -50,6 +54,6 @@ export default function PortfolioSnapshot() {
           </p>
         </div>
       </div>
-    </div>
+    </Link>
   );
 }

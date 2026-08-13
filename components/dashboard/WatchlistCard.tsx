@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { WATCHED_STOCKS } from "@/lib/stockSymbols";
 import { useStockQuotes } from "@/hooks/useStockQuotes";
+import { Skeleton } from "../ui/Skeleton";
 
 export default function WatchlistCard() {
   const symbols = WATCHED_STOCKS.map((s) => s.symbol);
@@ -14,7 +15,16 @@ export default function WatchlistCard() {
         Watchlist
       </h2>
 
-      {loading && <p className="text-sm text-neutral-500">Loading...</p>}
+{loading && (
+        <div className="space-y-3">
+          {Array.from({ length: 5 }).map((_, i) => (
+            <div key={i} className="flex justify-between items-center">
+              <Skeleton className="h-4 w-32" />
+              <Skeleton className="h-4 w-16" />
+            </div>
+          ))}
+        </div>
+      )}
       {error && (
         <p className="text-sm text-red-400">Couldn't load data: {error}</p>
       )}

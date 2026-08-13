@@ -2,6 +2,7 @@
 
 import { WATCHED_STOCKS } from "@/lib/stockSymbols";
 import { useStockQuotes } from "@/hooks/useStockQuotes";
+import { Skeleton } from "../ui/Skeleton";
 
 export default function MarketOverview() {
   const symbols = WATCHED_STOCKS.map((s) => s.symbol);
@@ -13,8 +14,16 @@ export default function MarketOverview() {
         Market Overview
       </h2>
 
-      {loading && (
-        <p className="text-sm text-neutral-500">Loading market data...</p>
+{loading && (
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+          {Array.from({ length: 5 }).map((_, i) => (
+            <div key={i} className="bg-neutral-800 rounded-md p-3 space-y-2">
+              <Skeleton className="h-4 w-12" />
+              <Skeleton className="h-6 w-20" />
+              <Skeleton className="h-3 w-16" />
+            </div>
+          ))}
+        </div>
       )}
 
       {error && (
