@@ -1,4 +1,8 @@
+"use client";
+
 import { NewsArticle } from "@/hooks/useNews";
+import { relativeTime } from "@/lib/relativeTime";
+import { colorForSource } from "@/lib/sourceColors";
 
 interface NewsCardProps {
   article: NewsArticle;
@@ -6,34 +10,28 @@ interface NewsCardProps {
 }
 
 export default function NewsCard({ article, onSelect }: NewsCardProps) {
-  const date = new Date(article.datetime * 1000).toLocaleDateString("en-US", {
-    month: "short",
-    day: "numeric",
-  });
+  const color = colorForSource(article.source);
 
   return (
     <button
       onClick={() => onSelect(article)}
-      className="flex gap-3 bg-neutral-900 border border-neutral-800 rounded-lg p-3 hover:border-neutral-700 transition-colors text-left w-full"
+      className="text-left w-full py-3 border-b border-neutral-800 last:border-0"
     >
-      {article.image && (
-        <img
-          src={article.image}
-          alt=""
-          className="w-20 h-20 object-cover rounded-md flex-shrink-0 bg-neutral-800"
-          onError={(e) => {
-            (e.target as HTMLImageElement).style.display = "none";
-          }}
-        />
-      )}
-      <div className="min-w-0">
-        <p className="text-sm font-medium text-neutral-100 line-clamp-2">
-          {article.headline}
-        </p>
-        <p className="text-xs text-neutral-500 mt-1">
-          {article.source} - {date}
-        </p>
+      <div className="flex items-center gap-2 mb-1.5">
+        <div
+          className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold flex-shrink-0 ${color.bg} ${color.text}`}
+        >
+          {article.source.charAt(0)}
+        </div>
+        <span className="text-xs text-neutral-400">{article.source}</span>
+        <span className="text-xs text-neutral-600">·</span>
+        <span className="text-xs text-neutral-600">
+          {relativeTime(article.datetime)}
+        </span>
       </div>
+      <p className="text-sm font-medium text-neutral-100 leading-snug line-clamp-2">
+        {article.headline}
+      </p>
     </button>
   );
 }

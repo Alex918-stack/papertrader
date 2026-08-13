@@ -1,7 +1,9 @@
 "use client";
 
+import Link from "next/link";
 import { usePortfolio } from "@/lib/PortfolioContext";
 import { useStockQuotes } from "@/hooks/useStockQuotes";
+import { Skeleton } from "@/components/ui/Skeleton";
 
 export default function HoldingsTable() {
   const { holdings } = usePortfolio();
@@ -10,9 +12,17 @@ export default function HoldingsTable() {
 
   if (holdings.length === 0) {
     return (
-      <div className="bg-neutral-900 border border-neutral-800 rounded-lg p-4 text-sm text-neutral-500">
-        You don't own any stocks yet. Head to the Trading page to place your
-        first order.
+      <div className="bg-neutral-900 border border-neutral-800 rounded-lg p-6 text-center space-y-3">
+        <p className="text-sm text-neutral-500">
+          You don't own any stocks yet. Head to the Trading page to place
+          your first order.
+        </p>
+        <Link
+          href="/trading"
+          className="inline-block bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-medium px-4 py-2 rounded-full transition-colors"
+        >
+          Go to Trading
+        </Link>
       </div>
     );
   }
@@ -23,7 +33,13 @@ export default function HoldingsTable() {
         Current Holdings
       </h2>
 
-      {loading && <p className="text-sm text-neutral-500">Loading prices...</p>}
+      {loading && (
+        <div className="space-y-3">
+          {Array.from({ length: 3 }).map((_, i) => (
+            <Skeleton key={i} className="h-10 w-full" />
+          ))}
+        </div>
+      )}
       {error && (
         <p className="text-sm text-red-400">Couldn't load prices: {error}</p>
       )}
@@ -71,8 +87,8 @@ export default function HoldingsTable() {
                         isPositive ? "text-emerald-400" : "text-red-400"
                       }`}
                     >
-                      {isPositive ? "+" : ""}
-                      ${gainLoss.toFixed(2)} ({isPositive ? "+" : ""}
+                      {isPositive ? "+$" : "-$"}
+                      {Math.abs(gainLoss).toFixed(2)} ({isPositive ? "+" : ""}
                       {gainLossPercent.toFixed(2)}%)
                     </td>
                   </tr>

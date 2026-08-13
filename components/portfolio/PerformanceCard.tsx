@@ -48,12 +48,12 @@ export default function PerformanceCard() {
             isPositive ? "text-emerald-400" : "text-red-400"
           }`}
         >
-          {holdings.length > 0 && loading ? (
+{holdings.length > 0 && loading ? (
             "..."
           ) : (
             <>
-              {isPositive ? "+" : ""}
-              ${totalGainLoss.toFixed(2)} ({isPositive ? "+" : ""}
+              {isPositive ? "+$" : "-$"}
+              {Math.abs(totalGainLoss).toFixed(2)} ({isPositive ? "+" : ""}
               {gainLossPercent.toFixed(2)}%)
             </>
           )}

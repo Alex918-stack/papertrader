@@ -3,7 +3,6 @@
 import { useState } from "react";
 import Navbar from "./Navbar";
 import Sidebar from "./Sidebar";
-import Footer from "./Footer";
 
 interface AppShellProps {
   children: React.ReactNode;
@@ -21,7 +20,6 @@ export default function AppShell({ children }: AppShellProps) {
           {children}
         </main>
       </div>
-      <Footer />
     </div>
   );
 }

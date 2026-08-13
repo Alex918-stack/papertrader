@@ -4,6 +4,7 @@ const FINNHUB_BASE_URL = "https://finnhub.io/api/v1";
 
 export async function GET(request: NextRequest) {
   const symbol = request.nextUrl.searchParams.get("symbol");
+  const category = request.nextUrl.searchParams.get("category") ?? "general";
 
   const apiKey = process.env.FINNHUB_API_KEY;
   if (!apiKey) {
@@ -17,7 +18,6 @@ export async function GET(request: NextRequest) {
     let url: string;
 
     if (symbol) {
-      // News for a specific company, last 7 days
       const today = new Date();
       const weekAgo = new Date(today);
       weekAgo.setDate(today.getDate() - 7);
@@ -26,8 +26,7 @@ export async function GET(request: NextRequest) {
 
       url = `${FINNHUB_BASE_URL}/company-news?symbol=${symbol}&from=${fromDate}&to=${toDate}&token=${apiKey}`;
     } else {
-      // General market news
-      url = `${FINNHUB_BASE_URL}/news?category=general&token=${apiKey}`;
+      url = `${FINNHUB_BASE_URL}/news?category=${category}&token=${apiKey}`;
     }
 
     const response = await fetch(url);
@@ -51,15 +50,36 @@ export async function GET(request: NextRequest) {
       image: string;
     }
 
-    const articles = (data as FinnhubNewsItem[]).slice(0, 15).map((item) => ({
-      id: item.id,
-      headline: item.headline,
-      summary: item.summary,
-      source: item.source,
-      url: item.url,
-      datetime: item.datetime,
-      image: item.image,
-    }));
+const TRUSTED_SOURCES = [
+      "Reuters",
+      "CNBC",
+      "MarketWatch",
+      "Barron's",
+      "Yahoo",
+      "Forbes",
+      "Business Insider",
+      "The Wall Street Journal",
+      "Financial Times",
+      "Investor's Business Daily",
+    ];
+
+    const isTrusted = (source: string) =>
+      TRUSTED_SOURCES.some((trusted) =>
+        source.toLowerCase().includes(trusted.toLowerCase())
+      );
+
+    const articles = (data as FinnhubNewsItem[])
+      .filter((item) => isTrusted(item.source))
+      .slice(0, 15)
+      .map((item) => ({
+        id: item.id,
+        headline: item.headline,
+        summary: item.summary,
+        source: item.source,
+        url: item.url,
+        datetime: item.datetime,
+        image: item.image,
+      }));
 
     return NextResponse.json({ articles });
   } catch (err) {

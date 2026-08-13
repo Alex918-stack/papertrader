@@ -12,7 +12,7 @@ export interface NewsArticle {
   image: string;
 }
 
-export function useNews(symbol?: string) {
+export function useNews(symbol?: string, category?: string) {
   const [articles, setArticles] = useState<NewsArticle[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -24,8 +24,11 @@ export function useNews(symbol?: string) {
       setLoading(true);
       setError(null);
       try {
-        const url = symbol ? `/api/news?symbol=${symbol}` : `/api/news`;
-        const res = await fetch(url);
+        const params = new URLSearchParams();
+        if (symbol) params.set("symbol", symbol);
+        if (category) params.set("category", category);
+
+        const res = await fetch(`/api/news?${params.toString()}`);
         if (!res.ok) throw new Error(`Request failed with status ${res.status}`);
         const data = await res.json();
         if (!cancelled) {
@@ -45,7 +48,7 @@ export function useNews(symbol?: string) {
     return () => {
       cancelled = true;
     };
-  }, [symbol]);
+  }, [symbol, category]);
 
   return { articles, loading, error };
 }

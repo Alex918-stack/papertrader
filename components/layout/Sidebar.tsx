@@ -8,6 +8,7 @@ import {
   Briefcase,
   Bot,
   Newspaper,
+  Settings,
 } from "lucide-react";
 
 const NAV_ITEMS = [
@@ -16,6 +17,7 @@ const NAV_ITEMS = [
   { label: "Portfolio", href: "/portfolio", icon: Briefcase },
   { label: "AI Assistant", href: "/ai", icon: Bot },
   { label: "News", href: "/news", icon: Newspaper },
+  { label: "Settings", href: "/settings", icon: Settings },
 ];
 
 interface SidebarProps {

@@ -1,55 +1,91 @@
 "use client";
 
-import { createContext, useContext, useState, useEffect, ReactNode } from "react";
+import {
+  createContext,
+  useContext,
+  useState,
+  useEffect,
+  ReactNode,
+} from "react";
+import { useSession } from "next-auth/react";
 import { Holding, Transaction, PortfolioState } from "@/types/portfolio";
 
-const STARTING_CASH = 100000;
+export const STARTING_CASH = 100000;
 const STORAGE_KEY = "ai-paper-trader:portfolio";
 
 interface PortfolioContextValue extends PortfolioState {
   buy: (symbol: string, shares: number, price: number) => { success: boolean; message: string };
   sell: (symbol: string, shares: number, price: number) => { success: boolean; message: string };
   resetPortfolio: () => void;
+  syncStatus: "local" | "syncing" | "synced" | "error";
 }
 
 const PortfolioContext = createContext<PortfolioContextValue | undefined>(undefined);
 
-function loadFromStorage(): PortfolioState {
-  if (typeof window === "undefined") {
-    return { cash: STARTING_CASH, holdings: [], transactions: [] };
-  }
-  try {
-    const saved = localStorage.getItem(STORAGE_KEY);
-    if (saved) {
-      return JSON.parse(saved);
-    }
-  } catch (err) {
-    console.error("Failed to load portfolio from storage:", err);
-  }
+function defaultState(): PortfolioState {
   return { cash: STARTING_CASH, holdings: [], transactions: [] };
 }
 
 export function PortfolioProvider({ children }: { children: ReactNode }) {
+  const { status } = useSession();
   const [cash, setCash] = useState(STARTING_CASH);
   const [holdings, setHoldings] = useState<Holding[]>([]);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [hasLoaded, setHasLoaded] = useState(false);
+  const [syncStatus, setSyncStatus] = useState<"local" | "syncing" | "synced" | "error">("local");
 
-  // Load saved data once, when the app first mounts in the browser
+// Load data once we know whether the user is signed in or not
   useEffect(() => {
-    const saved = loadFromStorage();
-    setCash(saved.cash);
-    setHoldings(saved.holdings);
-    setTransactions(saved.transactions);
-    setHasLoaded(true);
-  }, []);
+    if (status === "loading") return;
 
-  // Save to localStorage every time cash, holdings, or transactions change
+    async function load() {
+      if (status === "authenticated") {
+        setSyncStatus("syncing");
+        try {
+          const res = await fetch("/api/sync/portfolio");
+          if (res.ok) {
+            const { data } = await res.json();
+            const state = data ?? defaultState();
+            setCash(state.cash);
+            setHoldings(state.holdings);
+            setTransactions(state.transactions);
+            setSyncStatus("synced");
+          } else {
+            setSyncStatus("error");
+          }
+        } catch {
+          setSyncStatus("error");
+        }
+      } else {
+        // Signed out (or never signed in): always start fresh, no local persistence
+        const fresh = defaultState();
+        setCash(fresh.cash);
+        setHoldings(fresh.holdings);
+        setTransactions(fresh.transactions);
+        localStorage.removeItem(STORAGE_KEY);
+        setSyncStatus("local");
+      }
+      setHasLoaded(true);
+    }
+
+    load();
+  }, [status]);
+
+// Save whenever data changes, after initial load - only persists when signed in
   useEffect(() => {
-    if (!hasLoaded) return; // don't overwrite storage before initial load finishes
+    if (!hasLoaded) return;
+    if (status !== "authenticated") return;
+
     const state: PortfolioState = { cash, holdings, transactions };
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-  }, [cash, holdings, transactions, hasLoaded]);
+    setSyncStatus("syncing");
+    fetch("/api/sync/portfolio", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(state),
+    })
+      .then((res) => setSyncStatus(res.ok ? "synced" : "error"))
+      .catch(() => setSyncStatus("error"));
+  }, [cash, holdings, transactions, hasLoaded, status]);
 
   function buy(symbol: string, shares: number, price: number) {
     const cost = shares * price;
@@ -127,7 +163,7 @@ export function PortfolioProvider({ children }: { children: ReactNode }) {
     ]);
   }
 
-  function resetPortfolio() {
+function resetPortfolio() {
     setCash(STARTING_CASH);
     setHoldings([]);
     setTransactions([]);
@@ -136,7 +172,7 @@ export function PortfolioProvider({ children }: { children: ReactNode }) {
 
   return (
     <PortfolioContext.Provider
-      value={{ cash, holdings, transactions, buy, sell, resetPortfolio }}
+      value={{ cash, holdings, transactions, buy, sell, resetPortfolio, syncStatus }}
     >
       {children}
     </PortfolioContext.Provider>

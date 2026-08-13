@@ -1,32 +1,68 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
+import { ChevronDown, ChevronUp } from "lucide-react";
 import { usePortfolio } from "@/lib/PortfolioContext";
-import { WATCHED_STOCKS } from "@/lib/stockSymbols";
+import { ALL_STOCKS } from "@/lib/stockSymbols";
 import { useStockQuotes } from "@/hooks/useStockQuotes";
+import OrderConfirmModal from "@/components/trading/OrderConfirmModal";
+import { useToast } from "@/components/ui/ToastProvider";
 
-export default function OrderTicket() {
+interface OrderTicketProps {
+  onSymbolChange?: (symbol: string) => void;
+}
+
+export default function OrderTicket({ onSymbolChange }: OrderTicketProps) {
   const { buy, sell, cash } = usePortfolio();
-  const [symbol, setSymbol] = useState(WATCHED_STOCKS[0].symbol);
-  const [shares, setShares] = useState(1);
-  const [feedback, setFeedback] = useState<string | null>(null);
+  const { showToast } = useToast();
+  const [search, setSearch] = useState("");
+  const [symbol, setSymbol] = useState(ALL_STOCKS[0].symbol);
+  const [action, setAction] = useState<"BUY" | "SELL">("BUY");
+const [shares, setShares] = useState(1);
+  const [pickerOpen, setPickerOpen] = useState(false);
+  const [confirmOpen, setConfirmOpen] = useState(false);
 
-  const allSymbols = WATCHED_STOCKS.map((s) => s.symbol);
-  const { quotes, loading, error } = useStockQuotes(allSymbols);
-
+  const { quotes, loading, error } = useStockQuotes([symbol]);
   const currentPrice = quotes[symbol]?.price ?? 0;
   const estimatedTotal = currentPrice * shares;
 
-  function handleTrade(type: "BUY" | "SELL") {
+  const filteredStocks = useMemo(() => {
+    if (!search.trim()) return ALL_STOCKS;
+    const q = search.toLowerCase();
+    return ALL_STOCKS.filter(
+      (s) =>
+        s.symbol.toLowerCase().includes(q) || s.name.toLowerCase().includes(q)
+    );
+  }, [search]);
+
+  const selectedStock = ALL_STOCKS.find((s) => s.symbol === symbol);
+
+function selectStock(sym: string) {
+    setSymbol(sym);
+    setSearch("");
+    setPickerOpen(false);
+    onSymbolChange?.(sym);
+  }
+
+function handlePreview() {
     if (!currentPrice) {
-      setFeedback("Price not loaded yet — try again in a moment.");
+      showToast("Price not loaded yet - try again in a moment.", "error");
       return;
     }
+    if (shares <= 0) {
+      showToast("Enter a valid number of shares.", "error");
+      return;
+    }
+    setConfirmOpen(true);
+  }
+
+function handleConfirm() {
     const result =
-      type === "BUY"
+      action === "BUY"
         ? buy(symbol, shares, currentPrice)
         : sell(symbol, shares, currentPrice);
-    setFeedback(result.message);
+    showToast(result.message, result.success ? "success" : "error");
+    setConfirmOpen(false);
   }
 
   return (
@@ -38,39 +74,101 @@ export default function OrderTicket() {
         <span className="text-emerald-400">${cash.toFixed(2)}</span>
       </div>
 
-      {loading && <p className="text-sm text-neutral-500">Loading prices...</p>}
-      {error && (
-        <p className="text-sm text-red-400">Couldn't load prices: {error}</p>
-      )}
+      <div className="relative">
+        <label className="block text-sm text-neutral-400 mb-1">Symbol</label>
 
-      <div>
-        <label className="block text-sm text-neutral-400 mb-1">Stock</label>
-        <select
-          value={symbol}
-          onChange={(e) => setSymbol(e.target.value)}
-          className="w-full bg-neutral-800 text-neutral-100 rounded-md px-3 py-2 border border-neutral-700"
+        <button
+          type="button"
+          onClick={() => setPickerOpen((prev) => !prev)}
+          className="w-full flex justify-between items-center bg-neutral-800 text-neutral-100 rounded-md px-3 py-2 border border-neutral-700 hover:border-neutral-600"
         >
-          {WATCHED_STOCKS.map((s) => {
-            const quote = quotes[s.symbol];
-            return (
-              <option key={s.symbol} value={s.symbol}>
-                {s.symbol} — {s.name}
-                {quote ? ` ($${quote.price.toFixed(2)})` : ""}
-              </option>
-            );
-          })}
-        </select>
+          <span>
+            {selectedStock
+              ? `${selectedStock.symbol} - ${selectedStock.name}`
+              : "Select a stock"}
+          </span>
+          {pickerOpen ? (
+            <ChevronUp size={18} className="text-neutral-500 flex-shrink-0" />
+          ) : (
+            <ChevronDown size={18} className="text-neutral-500 flex-shrink-0" />
+          )}
+        </button>
+
+        {pickerOpen && (
+          <div className="absolute z-20 mt-1 w-full bg-neutral-900 border border-neutral-700 rounded-md shadow-lg overflow-hidden">
+            <input
+              type="text"
+              autoFocus
+              placeholder="Search by symbol or name..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="w-full bg-neutral-800 text-neutral-100 px-3 py-2 border-b border-neutral-700 focus:outline-none"
+            />
+            <div className="max-h-56 overflow-y-auto thin-scrollbar divide-y divide-neutral-800">
+              {filteredStocks.length === 0 && (
+                <p className="text-sm text-neutral-500 px-3 py-3">
+                  No matches found
+                </p>
+              )}
+              {filteredStocks.map((s) => (
+                <button
+                  key={s.symbol}
+                  type="button"
+                  onClick={() => selectStock(s.symbol)}
+                  className={`w-full text-left px-3 py-2.5 text-sm transition-colors flex justify-between items-center ${
+                    s.symbol === symbol
+                      ? "bg-emerald-500/10 text-emerald-400"
+                      : "text-neutral-200 hover:bg-neutral-800"
+                  }`}
+                >
+                  <span>
+                    <span className="font-medium">{s.symbol}</span>
+                    <span className="text-neutral-500 ml-2">{s.name}</span>
+                  </span>
+                  {s.symbol === symbol && (
+                    <span className="text-emerald-400 text-xs">Selected</span>
+                  )}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
 
-      <div>
-        <label className="block text-sm text-neutral-400 mb-1">Shares</label>
-        <input
-          type="number"
-          min={1}
-          value={shares}
-          onChange={(e) => setShares(Number(e.target.value))}
-          className="w-full bg-neutral-800 text-neutral-100 rounded-md px-3 py-2 border border-neutral-700"
-        />
+      {loading && <p className="text-sm text-neutral-500">Loading price...</p>}
+      {error && (
+        <p className="text-sm text-red-400">Couldn't load price: {error}</p>
+      )}
+      {!loading && !error && currentPrice > 0 && (
+        <div className="text-sm text-neutral-400">
+          Current price:{" "}
+          <span className="text-neutral-100">${currentPrice.toFixed(2)}</span>
+        </div>
+      )}
+
+      <div className="grid grid-cols-2 gap-3">
+        <div>
+          <label className="block text-sm text-neutral-400 mb-1">Action</label>
+          <select
+            value={action}
+            onChange={(e) => setAction(e.target.value as "BUY" | "SELL")}
+            className="w-full bg-neutral-800 text-neutral-100 rounded-md px-3 py-2 border border-neutral-700"
+          >
+            <option value="BUY">Buy</option>
+            <option value="SELL">Sell</option>
+          </select>
+        </div>
+
+        <div>
+          <label className="block text-sm text-neutral-400 mb-1">Shares</label>
+          <input
+            type="number"
+            min={1}
+            value={shares}
+            onChange={(e) => setShares(Number(e.target.value))}
+            className="w-full bg-neutral-800 text-neutral-100 rounded-md px-3 py-2 border border-neutral-700"
+          />
+        </div>
       </div>
 
       <div className="text-sm text-neutral-400">
@@ -78,26 +176,27 @@ export default function OrderTicket() {
         <span className="text-neutral-100">${estimatedTotal.toFixed(2)}</span>
       </div>
 
-      <div className="flex gap-2">
-        <button
-          onClick={() => handleTrade("BUY")}
-          className="flex-1 bg-emerald-600 hover:bg-emerald-500 text-white font-medium py-2 rounded-md transition-colors"
-        >
-          Buy
-        </button>
-        <button
-          onClick={() => handleTrade("SELL")}
-          className="flex-1 bg-red-600 hover:bg-red-500 text-white font-medium py-2 rounded-md transition-colors"
-        >
-          Sell
-        </button>
-      </div>
+      <button
+        onClick={handlePreview}
+        className={`w-full font-medium py-2 rounded-md transition-colors text-white ${
+          action === "BUY"
+            ? "bg-emerald-600 hover:bg-emerald-500"
+            : "bg-red-600 hover:bg-red-500"
+        }`}
+      >
+        Preview {action === "BUY" ? "Buy" : "Sell"} Order
+      </button>
 
-      {feedback && (
-        <p className="text-sm text-neutral-300 bg-neutral-800 rounded-md px-3 py-2">
-          {feedback}
-        </p>
-      )}
+<OrderConfirmModal
+        isOpen={confirmOpen}
+        action={action}
+        symbol={symbol}
+        companyName={selectedStock?.name ?? ""}
+        shares={shares}
+        price={currentPrice}
+        onConfirm={handleConfirm}
+        onCancel={() => setConfirmOpen(false)}
+      />
     </div>
   );
 }
