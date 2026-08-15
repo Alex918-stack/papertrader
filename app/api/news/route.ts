@@ -51,6 +51,7 @@ export async function GET(request: NextRequest) {
     }
 
 const TRUSTED_SOURCES = [
+      // General finance
       "Reuters",
       "CNBC",
       "MarketWatch",
@@ -61,6 +62,17 @@ const TRUSTED_SOURCES = [
       "The Wall Street Journal",
       "Financial Times",
       "Investor's Business Daily",
+      "Bloomberg",
+      // Crypto
+      "CoinDesk",
+      "Cointelegraph",
+      "The Block",
+      "Decrypt",
+      "CryptoSlate",
+      // Forex / macro
+      "Investing.com",
+      "FXStreet",
+      "DailyFX",
     ];
 
     const isTrusted = (source: string) =>

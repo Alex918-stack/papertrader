@@ -5,9 +5,7 @@ interface CategoryTabsProps {
 
 const CATEGORIES = [
   { value: "general", label: "General" },
-  { value: "forex", label: "Forex" },
   { value: "crypto", label: "Crypto" },
-  { value: "merger", label: "M&A" },
 ];
 
 export default function CategoryTabs({ active, onChange }: CategoryTabsProps) {

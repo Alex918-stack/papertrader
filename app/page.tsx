@@ -3,6 +3,7 @@ import TopMovers from "@/components/dashboard/TopMovers";
 import WatchlistCard from "@/components/dashboard/WatchlistCard";
 import PortfolioSnapshot from "@/components/dashboard/PortfolioSnapshot";
 import PortfolioChart from "@/components/charts/PortfolioChart";
+import NewsWidget from "@/components/dashboard/NewsWidget";
 
 export default function Home() {
   return (
@@ -11,6 +12,7 @@ export default function Home() {
       <PortfolioSnapshot />
       <MarketOverview />
       <PortfolioChart />
+      <NewsWidget />
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <TopMovers />
         <WatchlistCard />

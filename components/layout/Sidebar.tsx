@@ -7,7 +7,6 @@ import {
   TrendingUp,
   Briefcase,
   Bot,
-  Newspaper,
   Settings,
 } from "lucide-react";
 
@@ -16,7 +15,6 @@ const NAV_ITEMS = [
   { label: "Trading", href: "/trading", icon: TrendingUp },
   { label: "Portfolio", href: "/portfolio", icon: Briefcase },
   { label: "AI Assistant", href: "/ai", icon: Bot },
-  { label: "News", href: "/news", icon: Newspaper },
   { label: "Settings", href: "/settings", icon: Settings },
 ];
 
