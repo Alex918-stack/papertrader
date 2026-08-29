@@ -1,128 +1,93 @@
 import { NextRequest, NextResponse } from "next/server";
+import { getCachedQuote, getCachedProfile, getCachedDailyPrices } from "@/lib/marketDataCache";
+import {
+  fetchQuoteFromFinnhub,
+  fetchProfileFromFinnhub,
+  fetchDailyPricesFromTwelveData,
+  computeAvgDollarVolume,
+} from "@/lib/marketDataProviders";
 
-const FINNHUB_BASE_URL = "https://finnhub.io/api/v1";
-
-const quoteCache = new Map<string, { data: any; expires: number }>();
-const CACHE_DURATION_MS = 10_000;
-
-const candleCache = new Map<string, { data: any; expires: number }>();
-const CANDLE_CACHE_DURATION_MS = 6 * 60 * 60 * 1000; // 6 hours
+// Fetches a window generous enough to cover every range the UI offers
+// (1M/3M/6M/1Y) in one call, cached once per symbol in symbol_daily_prices
+// - a request for "1Y" and a later request for "3M" on the same symbol
+// now share one upstream fetch instead of two (the old per-outputsize
+// cache key meant they never did).
+const DAILY_PRICES_OUTPUTSIZE = 400;
 
 export async function GET(request: NextRequest) {
   const symbol = request.nextUrl.searchParams.get("symbol");
   const type = request.nextUrl.searchParams.get("type") ?? "quote";
 
   if (!symbol) {
-    return NextResponse.json(
-      { error: "Missing symbol parameter" },
-      { status: 400 }
-    );
+    return NextResponse.json({ error: "Missing symbol parameter" }, { status: 400 });
   }
 
-  const apiKey = process.env.FINNHUB_API_KEY;
-  if (!apiKey) {
-    return NextResponse.json(
-      { error: "Server is missing FINNHUB_API_KEY" },
-      { status: 500 }
-    );
+  const finnhubKey = process.env.FINNHUB_API_KEY;
+  if (!finnhubKey) {
+    return NextResponse.json({ error: "Server is missing FINNHUB_API_KEY" }, { status: 500 });
   }
 
-  try {
-    if (type === "candles") {
-      const twelveDataKey = process.env.TWELVE_DATA_API_KEY;
-      if (!twelveDataKey) {
-        return NextResponse.json(
-          { error: "Server is missing TWELVE_DATA_API_KEY" },
-          { status: 500 }
-        );
-      }
-
-      const days = request.nextUrl.searchParams.get("days") ?? "30";
-      const outputsize = Math.min(Math.max(parseInt(days, 10) || 30, 2), 365);
-      const cacheKey = `${symbol}:${outputsize}`;
-
-      const cached = candleCache.get(cacheKey);
-      if (cached && cached.expires > Date.now()) {
-        return NextResponse.json(cached.data);
-      }
-
-      const response = await fetch(
-        `https://api.twelvedata.com/time_series?symbol=${symbol}&interval=1day&outputsize=${outputsize}&apikey=${twelveDataKey}`
-      );
-
-      if (!response.ok) {
-        if (cached) {
-          return NextResponse.json(cached.data);
-        }
-        return NextResponse.json(
-          { error: `Twelve Data request failed with status ${response.status}` },
-          { status: response.status }
-        );
-      }
-
-      const data = await response.json();
-
-      if (data.status === "error" || !data.values) {
-        if (cached) {
-          return NextResponse.json(cached.data);
-        }
-        return NextResponse.json(
-          { error: data.message ?? "No historical data available for this symbol." },
-          { status: 404 }
-        );
-      }
-
-      const points = data.values
-        .map((v: { datetime: string; close: string }) => ({
-          date: v.datetime,
-          close: parseFloat(v.close),
-        }))
-        .reverse();
-
-      const result = { symbol, points };
-      candleCache.set(cacheKey, {
-        data: result,
-        expires: Date.now() + CANDLE_CACHE_DURATION_MS,
-      });
-
-      return NextResponse.json(result);
+  if (type === "candles") {
+    const twelveDataKey = process.env.TWELVE_DATA_API_KEY;
+    if (!twelveDataKey) {
+      return NextResponse.json({ error: "Server is missing TWELVE_DATA_API_KEY" }, { status: 500 });
     }
 
-    // default: current quote - check cache first
-    const cached = quoteCache.get(symbol);
-    if (cached && cached.expires > Date.now()) {
-      return NextResponse.json(cached.data);
-    }
-
-    const response = await fetch(
-      `${FINNHUB_BASE_URL}/quote?symbol=${symbol}&token=${apiKey}`
+    const days = parseInt(request.nextUrl.searchParams.get("days") ?? "30", 10) || 30;
+    const cacheResult = await getCachedDailyPrices(symbol, () =>
+      fetchDailyPricesFromTwelveData(symbol, twelveDataKey, DAILY_PRICES_OUTPUTSIZE)
     );
 
-    if (!response.ok) {
-      return NextResponse.json(
-        { error: `Finnhub request failed with status ${response.status}` },
-        { status: response.status }
-      );
+    if (cacheResult.status === "pending") {
+      return NextResponse.json({ symbol, status: "pending" });
+    }
+    if (cacheResult.status === "unavailable") {
+      return NextResponse.json({ symbol, status: "unavailable", error: cacheResult.error });
     }
 
-    const data = await response.json();
-    const result = {
+    const allPoints = cacheResult.data;
+    const windowStart = Date.now() - days * 24 * 60 * 60 * 1000;
+    const points = allPoints
+      .filter((p) => new Date(p.date).getTime() >= windowStart)
+      .map((p) => ({ date: p.date, close: p.close }));
+
+    return NextResponse.json({
       symbol,
-      price: data.c,
-      change: data.d,
-      changePercent: data.dp,
-    };
-
-    quoteCache.set(symbol, {
-      data: result,
-      expires: Date.now() + CACHE_DURATION_MS,
+      status: cacheResult.status,
+      asOf: cacheResult.asOf,
+      points,
+      avgDollarVolume20d: computeAvgDollarVolume(allPoints),
     });
-
-    return NextResponse.json(result);
-  } catch (err) {
-    return NextResponse.json(
-      { error: "Failed to fetch stock data" },
-      { status: 500 }
-    );
   }
+
+  // default: current quote + profile (market cap), each independently
+  // cached and independently single-flighted - a cold quote and a warm
+  // profile for the same symbol don't block on each other.
+  const [quoteResult, profileResult] = await Promise.all([
+    getCachedQuote(symbol, () => fetchQuoteFromFinnhub(symbol, finnhubKey)),
+    getCachedProfile(symbol, () => fetchProfileFromFinnhub(symbol, finnhubKey)),
+  ]);
+
+  if (quoteResult.status === "pending") {
+    return NextResponse.json({ symbol, status: "pending" });
+  }
+  if (quoteResult.status === "unavailable") {
+    return NextResponse.json({ symbol, status: "unavailable", error: quoteResult.error });
+  }
+
+  // Market cap is a secondary field on the quote response - a profile
+  // that's still pending or failed shouldn't block the quote itself from
+  // rendering, it just means marketCap comes back null for now.
+  const marketCap =
+    profileResult.status === "fresh" || profileResult.status === "stale" ? profileResult.data.marketCap : null;
+
+  return NextResponse.json({
+    symbol,
+    status: quoteResult.status,
+    asOf: quoteResult.asOf,
+    price: quoteResult.data.price,
+    change: quoteResult.data.change,
+    changePercent: quoteResult.data.changePercent,
+    marketCap,
+  });
 }

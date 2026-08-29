@@ -11,6 +11,7 @@
   --font-sans: var(--font-sans);
   --font-mono: var(--font-geist-mono);
   --font-heading: var(--font-sans);
+  --font-serif: var(--font-source-serif);
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -47,6 +48,39 @@
   --radius-2xl: calc(var(--radius) * 1.8);
   --radius-3xl: calc(var(--radius) * 2.2);
   --radius-4xl: calc(var(--radius) * 2.6);
+
+  /* Brand accents */
+  --color-coral-50: #fff3f0;
+  --color-coral-100: #ffe3db;
+  --color-coral-200: #ffc7b7;
+  --color-coral-300: #ffa48c;
+  --color-coral-400: #ff8a6b;
+  --color-coral-500: #ff7a5c;
+  --color-coral-600: #ef5f3d;
+  --color-coral-700: #d1472a;
+  --color-coral-800: #a8391f;
+  --color-coral-900: #7d2a17;
+
+  --color-seafoam-50: #f0fdfa;
+  --color-seafoam-100: #ccfbf1;
+  --color-seafoam-200: #99f6e4;
+  --color-seafoam-300: #5eead4;
+  --color-seafoam-400: #2dd4bf;
+  --color-seafoam-500: #14b8a6;
+  --color-seafoam-600: #0d9488;
+  --color-seafoam-700: #0f766e;
+
+  --color-sand-100: #faf4e8;
+  --color-sand-200: #f3e9d7;
+  --color-sand-300: #e8d4b0;
+  --color-sand-400: #d9bd8a;
+  --color-sand-500: #c7a267;
+  --color-sand-600: #a6793a;
+  --color-sand-700: #8a6530;
+
+  /* Motion: purposeful, slightly springy easing for interactive feedback */
+  --ease-out-quart: cubic-bezier(0.25, 1, 0.5, 1);
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
 .thin-scrollbar::-webkit-scrollbar {
@@ -58,17 +92,17 @@
 }
 
 .thin-scrollbar::-webkit-scrollbar-thumb {
-  background-color: #404040;
+  background-color: #d4d4d4;
   border-radius: 9999px;
 }
 
 .thin-scrollbar::-webkit-scrollbar-thumb:hover {
-  background-color: #525252;
+  background-color: #a3a3a3;
 }
 
 .thin-scrollbar {
   scrollbar-width: thin;
-  scrollbar-color: #404040 transparent;
+  scrollbar-color: #d4d4d4 transparent;
 }
 @keyframes message-in {
   from {
@@ -84,6 +118,316 @@
 .message-enter {
   animation: message-in 0.35s cubic-bezier(0.16, 1, 0.3, 1);
 }
+
+/* Tabular figures for prices, totals, and other measurement data */
+.num {
+  font-family: var(--font-geist-mono);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.01em;
+}
+
+@keyframes overlay-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes modal-in {
+  from {
+    opacity: 0;
+    transform: scale(0.96) translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+@keyframes dropdown-in {
+  from {
+    opacity: 0;
+    transform: scale(0.97) translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+.overlay-enter {
+  animation: overlay-in 0.15s var(--ease-out-quart);
+}
+
+.modal-enter {
+  animation: modal-in 0.25s var(--ease-spring);
+}
+
+.dropdown-enter {
+  animation: dropdown-in 0.15s var(--ease-out-quart);
+  transform-origin: top;
+}
+
+/* Exit is faster than entry and skips the spring - "release should always
+   be snappy," same as a button's press feedback. Higher specificity than
+   the plain .overlay-enter/.modal-enter rules above (class + attribute),
+   so this correctly wins once useDelayedUnmount flips data-state. */
+@keyframes overlay-out {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+
+@keyframes modal-out {
+  from {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+  to {
+    opacity: 0;
+    transform: scale(0.96) translateY(4px);
+  }
+}
+
+.overlay-enter[data-state="closing"] {
+  animation: overlay-out 0.15s ease-out forwards;
+}
+
+.modal-enter[data-state="closing"] {
+  animation: modal-out 0.15s ease-out forwards;
+}
+
+/* Toasts get their own enter/exit pair rather than reusing .message-enter -
+   they live in a fixed corner, not a scrolling conversation, so they
+   should enter and exit from their own direction (Sonner's principle:
+   spatial consistency), not borrow a chat bubble's motion. */
+@keyframes toast-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes toast-out {
+  from {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(4px) scale(0.96);
+  }
+}
+
+.toast-enter {
+  animation: toast-in 0.25s var(--ease-out-quart);
+}
+
+.toast-enter[data-state="closing"] {
+  animation: toast-out 0.15s ease-out forwards;
+}
+
+@keyframes shimmer {
+  from {
+    background-position: 150% 0;
+  }
+  to {
+    background-position: -50% 0;
+  }
+}
+
+.skeleton-shimmer {
+  background-image: linear-gradient(
+    100deg,
+    #e5e5e5 40%,
+    #f2f2f2 50%,
+    #e5e5e5 60%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.8s ease-in-out infinite;
+}
+
+/* Ocean/marketing surface: gradients, depth, and pseudo-3D helpers */
+.ocean-gradient-hero {
+  background:
+    radial-gradient(ellipse 80% 60% at 50% -10%, var(--color-sand-200) 0%, transparent 60%),
+    linear-gradient(180deg, var(--color-seafoam-50) 0%, var(--color-seafoam-100) 45%, var(--color-seafoam-300) 100%);
+}
+
+.app-surface {
+  background: linear-gradient(180deg, #ffffff 0%, var(--color-seafoam-50) 100%);
+  background-attachment: fixed;
+}
+
+.ocean-gradient-deep {
+  background: linear-gradient(160deg, var(--color-seafoam-600) 0%, var(--color-seafoam-700) 55%, #0a4a45 100%);
+}
+
+.perspective-container {
+  perspective: 1400px;
+}
+
+.glass-panel {
+  background: color-mix(in oklab, white 55%, transparent);
+  -webkit-backdrop-filter: blur(16px);
+  backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.6);
+  border: 1px solid color-mix(in oklab, white 60%, transparent);
+  box-shadow:
+    0 1px 0 0 color-mix(in oklab, white 70%, transparent) inset,
+    0 20px 40px -12px color-mix(in oklab, var(--color-seafoam-700) 35%, transparent);
+}
+
+@keyframes caustic-drift {
+  0%, 100% {
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+  50% {
+    transform: translate3d(2%, -3%, 0) scale(1.05);
+  }
+}
+
+.caustic-layer {
+  animation: caustic-drift 14s ease-in-out infinite;
+}
+
+@keyframes float-y {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
+.float-slow {
+  animation: float-y 6s ease-in-out infinite;
+}
+
+/* Guided tour (driver.js): restyled to match this app's cards and buttons
+   rather than the library's own default look - restraint applies here too,
+   so this only recolors/reshapes existing driver.js elements, no added
+   motion or decoration beyond what driver.js already does. */
+.tour-popover.driver-popover {
+  font-family: var(--font-sans);
+  border-radius: 0.5rem;
+  box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05), 0 4px 12px -2px rgb(0 0 0 / 0.08);
+  border: 1px solid var(--color-border);
+  padding: 1rem;
+}
+
+.tour-popover .driver-popover-title {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--color-neutral-900, #171717);
+}
+
+.tour-popover .driver-popover-description {
+  color: var(--color-neutral-600, #525252);
+  font-size: 0.875rem;
+}
+
+.tour-popover .driver-popover-progress-text {
+  color: var(--color-neutral-400, #a3a3a3);
+  font-size: 0.75rem;
+}
+
+/* driver.js's own footer is `display:flex; justify-content:space-between`
+   with exactly two children (progress text, nav-btns) in mind - nav-btns
+   also carries its own `flex-grow:1`. Our skip link is a third child
+   inserted first (see GuidedTour.tsx's onPopoverRender), so nav-btns'
+   flex-grow needs resetting here or it fights the skip link's auto margin
+   for the same free space and the two end up crammed together again. */
+.tour-popover .driver-popover-footer {
+  gap: 0.75rem;
+}
+
+.tour-popover .driver-popover-navigation-btns {
+  flex-grow: 0;
+}
+
+.tour-popover .driver-popover-footer-btn {
+  border-radius: 9999px;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  padding: 0.375rem 0.875rem;
+  text-shadow: none;
+  transition: transform 150ms var(--ease-out-quart), background-color 150ms;
+}
+
+.tour-popover .driver-popover-footer-btn:active {
+  transform: scale(0.97);
+}
+
+.tour-popover .driver-popover-next-btn {
+  background: var(--color-coral-500);
+  color: white;
+  border: none;
+}
+
+.tour-popover .driver-popover-next-btn:hover {
+  background: var(--color-coral-600);
+}
+
+.tour-popover .driver-popover-prev-btn {
+  background: transparent;
+  color: var(--color-neutral-500, #737373);
+  border: 1px solid var(--color-border);
+}
+
+/* The corner "x" - a quiet dismiss affordance, not a primary action, so it
+   deliberately doesn't get the coral treatment above. */
+.tour-popover .driver-popover-close-btn {
+  color: var(--color-neutral-400, #a3a3a3);
+}
+.tour-popover .driver-popover-close-btn:hover {
+  color: var(--color-neutral-600, #525252);
+}
+
+.tour-popover .driver-popover-arrow-side-top.driver-popover-arrow {
+  border-top-color: white;
+}
+.tour-popover .driver-popover-arrow-side-bottom.driver-popover-arrow {
+  border-bottom-color: white;
+}
+.tour-popover .driver-popover-arrow-side-left.driver-popover-arrow {
+  border-left-color: white;
+}
+.tour-popover .driver-popover-arrow-side-right.driver-popover-arrow {
+  border-right-color: white;
+}
+
+/* Always-visible skip affordance appended to the popover footer - the
+   corner "x" above is easy to miss, this is the real one. Text-link
+   styling, not a button, so it never competes with Next/Prev for
+   attention despite being present on every single beat. */
+.tour-skip-link {
+  background: none;
+  border: none;
+  padding: 0.375rem 0.5rem;
+  margin-right: auto;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: var(--color-neutral-400, #a3a3a3);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  cursor: pointer;
+  transition: color 150ms;
+}
+
+.tour-skip-link:hover {
+  color: var(--color-neutral-600, #525252);
+}
+
 /* Remove native up/down spinner arrows from number inputs */
 input[type="number"]::-webkit-outer-spin-button,
 input[type="number"]::-webkit-inner-spin-button {
@@ -97,7 +441,7 @@ input[type="number"] {
 }
 html {
   scrollbar-width: thin;
-  scrollbar-color: #404040 #0a0a0a;
+  scrollbar-color: #d4d4d4 #fafafa;
 }
 
 ::-webkit-scrollbar {
@@ -105,17 +449,17 @@ html {
 }
 
 ::-webkit-scrollbar-track {
-  background: #0a0a0a;
+  background: #fafafa;
 }
 
 ::-webkit-scrollbar-thumb {
-  background-color: #404040;
+  background-color: #d4d4d4;
   border-radius: 9999px;
-  border: 2px solid #0a0a0a;
+  border: 2px solid #fafafa;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background-color: #525252;
+  background-color: #a3a3a3;
 }
 
 :root {
@@ -125,32 +469,32 @@ html {
   --card-foreground: oklch(0.145 0 0);
   --popover: oklch(1 0 0);
   --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.205 0 0);
-  --primary-foreground: oklch(0.985 0 0);
+  --primary: #ff7a5c;
+  --primary-foreground: #ffffff;
   --secondary: oklch(0.97 0 0);
   --secondary-foreground: oklch(0.205 0 0);
   --muted: oklch(0.97 0 0);
   --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
+  --accent: #fff3f0;
+  --accent-foreground: #d1472a;
   --destructive: oklch(0.577 0.245 27.325);
   --border: oklch(0.922 0 0);
   --input: oklch(0.922 0 0);
-  --ring: oklch(0.708 0 0);
-  --chart-1: oklch(0.87 0 0);
-  --chart-2: oklch(0.556 0 0);
-  --chart-3: oklch(0.439 0 0);
-  --chart-4: oklch(0.371 0 0);
-  --chart-5: oklch(0.269 0 0);
+  --ring: #ff9478;
+  --chart-1: #ff7a5c;
+  --chart-2: #2dd4bf;
+  --chart-3: #e8d4b0;
+  --chart-4: oklch(0.556 0 0);
+  --chart-5: oklch(0.371 0 0);
   --radius: 0.625rem;
-  --sidebar: oklch(0.985 0 0);
+  --sidebar: #ffffff;
   --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: oklch(0.205 0 0);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.97 0 0);
-  --sidebar-accent-foreground: oklch(0.205 0 0);
+  --sidebar-primary: #ff7a5c;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #fff3f0;
+  --sidebar-accent-foreground: #d1472a;
   --sidebar-border: oklch(0.922 0 0);
-  --sidebar-ring: oklch(0.708 0 0);
+  --sidebar-ring: #ff9478;
 }
 
 .dark {

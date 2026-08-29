@@ -40,31 +40,6 @@ export function loadHistory(id: string): HistoryPoint[] {
   }
 }
 
-export async function syncHistoryToServer(id: string, history: HistoryPoint[]) {
-  try {
-    await fetch(`/api/sync/history?id=${encodeURIComponent(id)}`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(history),
-    });
-  } catch {
-    // Silent - local copy is still safe
-  }
-}
-
-export async function loadHistoryFromServer(
-  id: string
-): Promise<HistoryPoint[] | null> {
-  try {
-    const res = await fetch(`/api/sync/history?id=${encodeURIComponent(id)}`);
-    if (!res.ok) return null;
-    const { data } = await res.json();
-    return data;
-  } catch {
-    return null;
-  }
-}
-
 export function mergeHistories(
   a: HistoryPoint[],
   b: HistoryPoint[]

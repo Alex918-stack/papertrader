@@ -1,0 +1,26 @@
+{
+  "detector": {
+    "ignoreRules": [],
+    "ignoreFiles": [],
+    "ignoreValues": [
+      {
+        "rule": "gray-on-color",
+        "value": "text-neutral-400 on bg-red-600",
+        "files": [
+          "components/ui/Button.tsx"
+        ],
+        "createdAt": "2026-08-16T04:13:17.876Z",
+        "reason": "disabled: and default-state classes on the same line never render together; disabled state pairs with disabled:bg-neutral-200, not bg-red-600"
+      },
+      {
+        "rule": "gray-on-color",
+        "value": "text-neutral-400 on bg-green-600",
+        "files": [
+          "components/ui/Button.tsx"
+        ],
+        "createdAt": "2026-08-16T04:57:38.031Z",
+        "reason": "disabled: and default-state classes on the same line never render together; disabled state pairs with disabled:bg-neutral-200, not bg-green-600 or bg-red-600"
+      }
+    ]
+  }
+}

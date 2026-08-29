@@ -1,6 +1,10 @@
+import { TradeToExecute, TradeExecutionResult } from "@/lib/executeTradePlan";
+
 export interface StoredMessage {
   role: "user" | "assistant";
   content: string;
+  proposedTrades?: { trades: TradeToExecute[]; summary: string } | null;
+  executionResults?: TradeExecutionResult[] | null;
 }
 
 export interface Conversation {

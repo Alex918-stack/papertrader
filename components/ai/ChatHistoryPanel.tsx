@@ -26,10 +26,10 @@ export default function ChatHistoryPanel({
 
   if (collapsed) {
     return (
-      <div className="flex-shrink-0 bg-neutral-900 border border-neutral-800 rounded-lg flex flex-col items-center py-3 gap-3 h-[65vh] w-14">
+      <div className="flex-shrink-0 bg-white border border-neutral-200 rounded-lg flex flex-col items-center py-3 gap-3 h-[65vh] w-14 shadow-sm">
         <button
           onClick={onToggleCollapse}
-          className="text-neutral-400 hover:text-neutral-100 p-2 rounded-md hover:bg-neutral-800"
+          className="text-neutral-400 hover:text-neutral-900 active:scale-[0.9] transition-transform duration-150 ease-out-quart p-2 rounded-md hover:bg-neutral-100"
           aria-label="Expand chat history"
           title="Expand chat history"
         >
@@ -37,7 +37,7 @@ export default function ChatHistoryPanel({
         </button>
         <button
           onClick={onNew}
-          className="text-emerald-400 hover:text-emerald-300 p-2 rounded-md hover:bg-neutral-800"
+          className="text-coral-600 hover:text-coral-700 active:scale-[0.9] transition-all duration-150 ease-out-quart p-2 rounded-md hover:bg-coral-50"
           aria-label="New chat"
           title="New chat"
         >
@@ -48,18 +48,18 @@ export default function ChatHistoryPanel({
   }
 
   return (
-    <div className="w-full sm:w-64 flex-shrink-0 bg-neutral-900 border border-neutral-800 rounded-lg flex flex-col h-[65vh]">
-      <div className="p-3 border-b border-neutral-800 flex items-center gap-2">
+    <div className="w-full sm:w-64 flex-shrink-0 bg-white border border-neutral-200 rounded-lg flex flex-col h-[65vh] shadow-sm">
+      <div className="p-3 border-b border-neutral-200 flex items-center gap-2">
         <button
           onClick={onNew}
-          className="flex-1 flex items-center gap-2 bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-medium px-3 py-2 rounded-md transition-colors"
+          className="flex-1 flex items-center gap-2 bg-coral-500 hover:bg-coral-600 active:scale-[0.97] text-white text-sm font-medium px-3 py-2 rounded-md transition-all duration-150 ease-out-quart"
         >
           <Plus size={16} />
           New chat
         </button>
         <button
           onClick={onToggleCollapse}
-          className="text-neutral-500 hover:text-neutral-200 p-2 rounded-md hover:bg-neutral-800 flex-shrink-0"
+          className="text-neutral-400 hover:text-neutral-700 active:scale-[0.9] transition-transform duration-150 ease-out-quart p-2 rounded-md hover:bg-neutral-100 flex-shrink-0"
           aria-label="Collapse chat history"
           title="Collapse chat history"
         >
@@ -67,9 +67,9 @@ export default function ChatHistoryPanel({
         </button>
       </div>
 
-      <div className="flex-1 overflow-y-auto thin-scrollbar p-2 space-y-1">
+      <div className="flex-1 overflow-y-auto thin-scrollbar p-2 space-y-1" data-lenis-prevent>
         {sorted.length === 0 && (
-          <p className="text-xs text-neutral-600 text-center py-6 px-2">
+          <p className="text-xs text-neutral-400 text-center py-6 px-2">
             No conversations yet. Start a new chat to see it here.
           </p>
         )}
@@ -78,8 +78,8 @@ export default function ChatHistoryPanel({
             key={conv.id}
             className={`group flex items-center gap-2 rounded-md px-3 py-2 cursor-pointer transition-colors ${
               conv.id === activeId
-                ? "bg-emerald-500/10 text-emerald-400"
-                : "text-neutral-300 hover:bg-neutral-800"
+                ? "bg-coral-50 text-coral-800"
+                : "text-neutral-600 hover:bg-neutral-100"
             }`}
             onClick={() => onSelect(conv.id)}
           >
@@ -90,7 +90,7 @@ export default function ChatHistoryPanel({
                 e.stopPropagation();
                 onDelete(conv.id);
               }}
-              className="opacity-0 group-hover:opacity-100 text-neutral-500 hover:text-red-400 transition-opacity flex-shrink-0"
+              className="opacity-0 group-hover:opacity-100 text-neutral-400 hover:text-red-600 active:scale-[0.9] transition-all duration-150 ease-out-quart flex-shrink-0"
               aria-label="Delete conversation"
             >
               <Trash2 size={14} />

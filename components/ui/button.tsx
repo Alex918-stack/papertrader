@@ -1,58 +1,58 @@
-import { Button as ButtonPrimitive } from "@base-ui/react/button"
-import { cva, type VariantProps } from "class-variance-authority"
+import { ButtonHTMLAttributes, forwardRef } from "react";
+import { cn } from "@/lib/utils";
 
-import { cn } from "@/lib/utils"
+export type ButtonVariant = "primary" | "secondary" | "ghost" | "danger" | "buy" | "sell";
+export type ButtonSize = "md" | "sm";
 
-const buttonVariants = cva(
-  "group/button inline-flex shrink-0 items-center justify-center rounded-md border border-transparent bg-clip-padding text-sm font-medium whitespace-nowrap transition-all outline-none select-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 active:not-aria-[haspopup]:translate-y-px disabled:pointer-events-none disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-3 aria-invalid:ring-destructive/20 dark:aria-invalid:border-destructive/50 dark:aria-invalid:ring-destructive/40 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
-  {
-    variants: {
-      variant: {
-        default: "bg-primary text-primary-foreground hover:bg-primary/80",
-        outline:
-          "border-border bg-background shadow-xs hover:bg-muted hover:text-foreground aria-expanded:bg-muted aria-expanded:text-foreground dark:border-input dark:bg-input/30 dark:hover:bg-input/50",
-        secondary:
-          "bg-secondary text-secondary-foreground hover:bg-[color-mix(in_oklch,var(--secondary),var(--foreground)_5%)] aria-expanded:bg-secondary aria-expanded:text-secondary-foreground",
-        ghost:
-          "hover:bg-muted hover:text-foreground aria-expanded:bg-muted aria-expanded:text-foreground dark:hover:bg-muted/50",
-        destructive:
-          "bg-destructive/10 text-destructive hover:bg-destructive/20 focus-visible:border-destructive/40 focus-visible:ring-destructive/20 dark:bg-destructive/20 dark:hover:bg-destructive/30 dark:focus-visible:ring-destructive/40",
-        link: "text-primary underline-offset-4 hover:underline",
-      },
-      size: {
-        default:
-          "h-9 gap-1.5 px-2.5 in-data-[slot=button-group]:rounded-md has-data-[icon=inline-end]:pr-2 has-data-[icon=inline-start]:pl-2",
-        xs: "h-6 gap-1 rounded-[min(var(--radius-md),8px)] px-2 text-xs in-data-[slot=button-group]:rounded-md has-data-[icon=inline-end]:pr-1.5 has-data-[icon=inline-start]:pl-1.5 [&_svg:not([class*='size-'])]:size-3",
-        sm: "h-8 gap-1 rounded-[min(var(--radius-md),10px)] px-2.5 in-data-[slot=button-group]:rounded-md has-data-[icon=inline-end]:pr-1.5 has-data-[icon=inline-start]:pl-1.5",
-        lg: "h-10 gap-1.5 px-2.5 has-data-[icon=inline-end]:pr-2 has-data-[icon=inline-start]:pl-2",
-        icon: "size-9",
-        "icon-xs":
-          "size-6 rounded-[min(var(--radius-md),8px)] in-data-[slot=button-group]:rounded-md [&_svg:not([class*='size-'])]:size-3",
-        "icon-sm":
-          "size-8 rounded-[min(var(--radius-md),10px)] in-data-[slot=button-group]:rounded-md",
-        "icon-lg": "size-10",
-      },
-    },
-    defaultVariants: {
-      variant: "default",
-      size: "default",
-    },
-  }
-)
+// One press-feedback depth, one radius, one transition timing - see DESIGN.md.
+// Not every button in the app uses this component yet (adopted incrementally
+// as each surface is touched, not a big-bang migration) - buttonVariants is
+// exported separately so a styled `<Link>` (a "Go to Trading" CTA, say) can
+// match without wrapping a real <button>.
+const BASE =
+  "inline-flex items-center justify-center gap-2 rounded-md font-medium transition-all duration-150 ease-out-quart active:scale-[0.97] disabled:cursor-not-allowed disabled:active:scale-100";
 
-function Button({
+const VARIANT_CLASSES: Record<ButtonVariant, string> = {
+  primary: "bg-coral-500 text-white hover:bg-coral-600 disabled:bg-neutral-200 disabled:text-neutral-400",
+  secondary: "bg-neutral-100 text-neutral-700 hover:bg-neutral-200 disabled:text-neutral-400",
+  ghost: "bg-transparent text-neutral-600 hover:bg-neutral-100 hover:text-neutral-900 disabled:text-neutral-300",
+  danger: "bg-red-600 text-white hover:bg-red-700 disabled:bg-neutral-200 disabled:text-neutral-400",
+  // Buy/sell are semantic, not decorative - green/red is reserved for this
+  // and for gain/loss, nowhere else. See DESIGN.md.
+  buy: "bg-green-600 text-white hover:bg-green-700 disabled:bg-neutral-200 disabled:text-neutral-400",
+  sell: "bg-red-600 text-white hover:bg-red-700 disabled:bg-neutral-200 disabled:text-neutral-400",
+};
+
+const SIZE_CLASSES: Record<ButtonSize, string> = {
+  md: "px-4 py-2 text-sm",
+  sm: "px-3 py-1.5 text-sm",
+};
+
+export function buttonVariants({
+  variant = "primary",
+  size = "md",
+  fullWidth,
   className,
-  variant = "default",
-  size = "default",
-  ...props
-}: ButtonPrimitive.Props & VariantProps<typeof buttonVariants>) {
-  return (
-    <ButtonPrimitive
-      data-slot="button"
-      className={cn(buttonVariants({ variant, size, className }))}
-      {...props}
-    />
-  )
+}: {
+  variant?: ButtonVariant;
+  size?: ButtonSize;
+  fullWidth?: boolean;
+  className?: string;
+} = {}) {
+  return cn(BASE, VARIANT_CLASSES[variant], SIZE_CLASSES[size], fullWidth && "w-full", className);
 }
 
-export { Button, buttonVariants }
+export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
+  variant?: ButtonVariant;
+  size?: ButtonSize;
+  fullWidth?: boolean;
+}
+
+const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button(
+  { variant, size, fullWidth, className, ...props },
+  ref
+) {
+  return <button ref={ref} className={buttonVariants({ variant, size, fullWidth, className })} {...props} />;
+});
+
+export default Button;

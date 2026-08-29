@@ -1,10 +1,10 @@
 const COLORS = [
-  { bg: "bg-emerald-500/20", text: "text-emerald-400" },
-  { bg: "bg-sky-500/20", text: "text-sky-400" },
-  { bg: "bg-violet-500/20", text: "text-violet-400" },
-  { bg: "bg-amber-500/20", text: "text-amber-400" },
-  { bg: "bg-rose-500/20", text: "text-rose-400" },
-  { bg: "bg-cyan-500/20", text: "text-cyan-400" },
+  { bg: "bg-seafoam-100", text: "text-seafoam-700" },
+  { bg: "bg-sky-100", text: "text-sky-700" },
+  { bg: "bg-violet-100", text: "text-violet-700" },
+  { bg: "bg-amber-100", text: "text-amber-700" },
+  { bg: "bg-rose-100", text: "text-rose-700" },
+  { bg: "bg-coral-100", text: "text-coral-800" },
 ];
 
 export function colorForSource(source: string) {

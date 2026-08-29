@@ -1,20 +1,15 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono, Source_Serif_4, Inter } from "next/font/google";
+import { Bricolage_Grotesque, Source_Serif_4 } from "next/font/google";
+import { GeistMono as geistMono } from "geist/font/mono";
 import "./globals.css";
-import AppShell from "@/components/layout/AppShell";
 import { PortfolioProvider } from "@/lib/PortfolioContext";
 import AuthProvider from "@/components/layout/AuthProvider";
+import { JournalProvider } from "@/components/journal/JournalProvider";
 import { ToastProvider } from "@/components/ui/ToastProvider";
 import { cn } from "@/lib/utils";
 
-const inter = Inter({subsets:['latin'],variable:'--font-sans'});
-
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
+const bricolageGrotesque = Bricolage_Grotesque({
+  variable: "--font-sans",
   subsets: ["latin"],
 });
 const sourceSerif = Source_Serif_4({
@@ -36,15 +31,22 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-className={cn("h-full", "antialiased", geistSans.variable, geistMono.variable, sourceSerif.variable, "font-sans", inter.variable)}
+      className={cn(
+        "h-full",
+        "antialiased",
+        bricolageGrotesque.variable,
+        geistMono.variable,
+        sourceSerif.variable,
+        "font-sans"
+      )}
     >
-<body className="min-h-full flex flex-col" suppressHydrationWarning>
+<body className="min-h-full flex flex-col bg-neutral-50 text-neutral-900" suppressHydrationWarning>
 <AuthProvider>
-          <PortfolioProvider>
-            <ToastProvider>
-              <AppShell>{children}</AppShell>
-            </ToastProvider>
-          </PortfolioProvider>
+          <JournalProvider>
+            <PortfolioProvider>
+              <ToastProvider>{children}</ToastProvider>
+            </PortfolioProvider>
+          </JournalProvider>
         </AuthProvider>
       </body>
     </html>

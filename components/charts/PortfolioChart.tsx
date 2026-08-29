@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { Clock } from "lucide-react";
 import {
   LineChart,
   Line,
@@ -12,6 +13,9 @@ import {
 import { usePortfolio, STARTING_CASH } from "@/lib/PortfolioContext";
 import { reconstructPortfolioHistory } from "@/lib/portfolioHistory";
 import { loadHistory, HistoryPoint } from "@/lib/priceHistory";
+import { formatMoney } from "@/lib/format";
+import Card from "@/components/ui/Card";
+import { Skeleton } from "@/components/ui/Skeleton";
 
 export default function PortfolioChart() {
   const { transactions } = usePortfolio();
@@ -83,47 +87,46 @@ export default function PortfolioChart() {
 
   const isPositive =
     data.length >= 2 ? data[data.length - 1].value >= data[0].value : true;
-  const lineColor = isPositive ? "#10b981" : "#ef4444";
+  const lineColor = isPositive ? "#16a34a" : "#dc2626";
 
   return (
-    <div className="bg-neutral-900 border border-neutral-800 rounded-lg p-4">
-      <h2 className="text-lg font-semibold text-neutral-100 mb-3">
+    <Card>
+      <h2 className="text-lg font-semibold text-neutral-900 mb-3">
         {usingFallback
           ? "Portfolio Value (recorded this session onward)"
           : "Portfolio Value Since First Trade"}
       </h2>
 
       {loading ? (
-        <p className="text-sm text-neutral-500 py-8 text-center">
-          Loading portfolio history...
-        </p>
+        <Skeleton className="h-[250px] w-full" />
       ) : data.length < 2 ? (
-        <p className="text-sm text-neutral-500 py-8 text-center">
-          Not enough data yet to draw a chart.
-        </p>
+        <div className="flex items-center justify-center gap-2 py-8 text-sm text-neutral-500">
+          <Clock size={15} className="flex-shrink-0 text-neutral-400" />
+          <p>Not enough data yet to draw a chart.</p>
+        </div>
       ) : (
         <ResponsiveContainer width="100%" height={250}>
           <LineChart data={data}>
             <XAxis
               dataKey="label"
-              stroke="#737373"
+              stroke="#a3a3a3"
               fontSize={12}
               interval={Math.max(Math.floor(data.length / 6), 0)}
             />
             <YAxis
-              stroke="#737373"
+              stroke="#a3a3a3"
               fontSize={12}
               domain={["auto", "auto"]}
               tickFormatter={(v) => `$${v.toFixed(0)}`}
             />
             <Tooltip
               contentStyle={{
-                backgroundColor: "#171717",
-                border: "1px solid #404040",
+                backgroundColor: "#ffffff",
+                border: "1px solid #e5e5e5",
                 borderRadius: "6px",
               }}
-              labelStyle={{ color: "#e5e5e5" }}
-              formatter={(value) => [`$${Number(value).toFixed(2)}`, "Value"]}
+              labelStyle={{ color: "#171717" }}
+              formatter={(value) => [`$${formatMoney(Number(value))}`, "Value"]}
             />
             <Line
               type="monotone"
@@ -135,6 +138,6 @@ export default function PortfolioChart() {
           </LineChart>
         </ResponsiveContainer>
       )}
-    </div>
+    </Card>
   );
 }
