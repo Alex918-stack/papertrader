@@ -13,8 +13,14 @@ const PADDING_CLASSES: Record<CardPadding, string> = {
 
 export interface CardProps extends HTMLAttributes<HTMLDivElement> {
   padding?: CardPadding;
-  // Matches the one documented hover-elevation step (shadow-sm -> shadow-md)
-  // for cards that act as click targets, e.g. PortfolioSnapshot's tile.
+  // Adds the one documented hover-elevation step (shadow-sm -> shadow-md)
+  // plus button semantics, for cards that are themselves the click target.
+  //
+  // Nothing passes this today. If you start using it, do NOT put focusable
+  // children (buttons, links, inputs) inside an interactive Card: role="button"
+  // around interactive content is invalid ARIA, and a keypress on the child
+  // bubbles up and fires the card's onClick as well. A card containing its own
+  // controls should stay non-interactive and let those controls be the targets.
   interactive?: boolean;
 }
 
@@ -24,22 +30,56 @@ export default function Card({
   className,
   onClick,
   onKeyDown,
+  onKeyUp,
   role,
   tabIndex,
   ...props
 }: CardProps) {
+  // Mirrors native <button> key semantics, which are asymmetric on purpose:
+  //
+  //   Enter -> activates on keydown
+  //   Space -> scrolling suppressed on keydown, activation on keyup
+  //
+  // Space has to wait for keyup because a held key emits repeating keydown
+  // events, so activating there fires onClick once per repeat - one long
+  // Space press would trigger the card several times over.
   const handleKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
     if (!interactive) {
       onKeyDown?.(event);
       return;
     }
 
-    if (event.key === "Enter" || event.key === " " || event.key === "Spacebar") {
+    // Give the caller's handler first refusal, so it can opt out of the
+    // default activation by calling preventDefault itself.
+    onKeyDown?.(event);
+    if (event.defaultPrevented) {
+      return;
+    }
+
+    if (event.key === "Enter") {
+      event.preventDefault();
+      event.currentTarget.click();
+    } else if (event.key === " " || event.key === "Spacebar") {
+      // Suppress the page scroll only; activation is deferred to keyup.
+      event.preventDefault();
+    }
+  };
+
+  const handleKeyUp = (event: KeyboardEvent<HTMLDivElement>) => {
+    if (!interactive) {
+      onKeyUp?.(event);
+      return;
+    }
+
+    onKeyUp?.(event);
+    if (event.defaultPrevented) {
+      return;
+    }
+
+    if (event.key === " " || event.key === "Spacebar") {
       event.preventDefault();
       event.currentTarget.click();
     }
-
-    onKeyDown?.(event);
   };
 
   return (
@@ -56,6 +96,7 @@ export default function Card({
       tabIndex={interactive ? 0 : tabIndex}
       onClick={onClick}
       onKeyDown={interactive ? handleKeyDown : onKeyDown}
+      onKeyUp={interactive ? handleKeyUp : onKeyUp}
     />
   );
 }
