@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient, getAuthedEmail } from "@/lib/supabase/server";
 import { checkCooldown, getCooldownKey } from "@/lib/rateLimitCooldown";
+import { callGeminiText } from "@/lib/gemini";
 
 // Every position close fires this route (fire-and-forget from
 // PortfolioContext.trade()), and it's also reachable on demand from the
@@ -9,78 +10,6 @@ import { checkCooldown, getCooldownKey } from "@/lib/rateLimitCooldown";
 // Same shared mechanism as the chat cooldown (lib/rateLimitCooldown.ts),
 // different bucket.
 const COOLDOWN_MS = 3000;
-
-const GEMINI_MODEL = "gemini-flash-lite-latest";
-const GEMINI_ENDPOINT = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`;
-
-// Measured empirically, not assumed: a 30-concurrent-request burst against
-// this exact endpoint/model returned 19 successes and 11 429s, each
-// carrying "limit: 15" (requests/minute) and "Please retry in ~8.2s" in the
-// error body. Two retries at that real observed window, not chat/route.ts's
-// shorter 600/1500/3000ms ladder (tuned for a different quota shape) - a
-// demo-scale burst against a 15 RPM ceiling needs to wait out the window,
-// not just back off briefly.
-const RETRYABLE_STATUS = new Set([429, 503]);
-const RETRY_DELAYS_MS = [9000, 9000];
-
-function sleep(ms: number) {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
-
-// Gemini's 429 body includes its own "Please retry in X.Xs" - prefer that
-// real signal over our fixed default when it's present, same "read the
-// actual signal, don't just guess" instinct this app applies everywhere
-// else (see e.g. ensureDailyPricesDeepCoverage's lease-based retry).
-function parseRetryAfterMs(errorMessage: string | null): number | null {
-  const match = errorMessage?.match(/retry in ([\d.]+)s/i);
-  if (!match) return null;
-  const seconds = parseFloat(match[1]);
-  return Number.isFinite(seconds) ? Math.ceil(seconds * 1000) : null;
-}
-
-async function callGemini(prompt: string, apiKey: string): Promise<string> {
-  let lastErrorMessage = "Gemini request failed.";
-
-  for (let attempt = 0; attempt <= RETRY_DELAYS_MS.length; attempt++) {
-    let response: Response;
-    try {
-      response = await fetch(GEMINI_ENDPOINT, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", "x-goog-api-key": apiKey },
-        body: JSON.stringify({ contents: [{ role: "user", parts: [{ text: prompt }] }] }),
-      });
-    } catch {
-      throw new Error("Failed to reach Gemini");
-    }
-
-    if (response.ok) {
-      const data = await response.json();
-      const parts: { text?: string }[] = data?.candidates?.[0]?.content?.parts ?? [];
-      const text = parts.map((p) => p.text ?? "").join("");
-      if (!text.trim()) throw new Error("Gemini returned an empty response");
-      return text;
-    }
-
-    const body = await response.json().catch(() => null);
-    const apiMessage: string | null = body?.error?.message ?? null;
-    lastErrorMessage = apiMessage
-      ? `Gemini error (${response.status}): ${apiMessage}`
-      : `Gemini request failed (${response.status})`;
-
-    const canRetry = RETRYABLE_STATUS.has(response.status) && attempt < RETRY_DELAYS_MS.length;
-    if (!canRetry) {
-      throw new Error(
-        response.status === 429 || response.status === 503
-          ? "The AI model is temporarily overloaded (Gemini's free tier can get busy). Please try again in a moment."
-          : lastErrorMessage
-      );
-    }
-
-    await sleep(parseRetryAfterMs(apiMessage) ?? RETRY_DELAYS_MS[attempt]);
-  }
-
-  throw new Error(lastErrorMessage);
-}
 
 interface EpisodeTransaction {
   type: string;
@@ -224,7 +153,7 @@ export async function POST(request: NextRequest) {
 
   let critiqueText: string;
   try {
-    critiqueText = await callGemini(prompt, apiKey);
+    critiqueText = await callGeminiText(prompt, apiKey);
   } catch (err) {
     return NextResponse.json(
       { error: err instanceof Error ? err.message : "Failed to reach Gemini" },

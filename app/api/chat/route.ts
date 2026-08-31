@@ -1,17 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
-import { ALL_ASSETS } from "@/lib/stockSymbols";
 import { getAuthedEmail } from "@/lib/supabase/server";
 import { getCachedProfile } from "@/lib/marketDataCache";
 import { fetchProfileFromFinnhub } from "@/lib/marketDataProviders";
 import { checkCooldown, getCooldownKey } from "@/lib/rateLimitCooldown";
-
-const ASSET_BY_SYMBOL = new Map(ALL_ASSETS.map((a) => [a.symbol, a]));
-
-// Stocks use the same ticker with Finnhub as everywhere else in the app;
-// crypto needs translation to Finnhub's "BINANCE:BTCUSDT" convention.
-function resolveFinnhubSymbol(symbol: string): string {
-  return ASSET_BY_SYMBOL.get(symbol.toUpperCase())?.quoteSymbol ?? symbol;
-}
+import { finnhubGet, getStockQuote, getStockNews } from "@/lib/finnhubClient";
 
 interface ChatMessage {
   role: "user" | "assistant";
@@ -40,82 +32,6 @@ interface GeminiPart {
 interface GeminiContent {
   role: "user" | "model";
   parts: GeminiPart[];
-}
-
-const FINNHUB_BASE_URL = "https://finnhub.io/api/v1";
-const FINNHUB_TIMEOUT_MS = 8000;
-
-async function finnhubGet(path: string, params: Record<string, string>) {
-  const apiKey = process.env.FINNHUB_API_KEY;
-  if (!apiKey) {
-    return { error: "Finnhub API key is not configured on the server." };
-  }
-
-  const url = new URL(`${FINNHUB_BASE_URL}${path}`);
-  for (const [key, value] of Object.entries(params)) {
-    url.searchParams.set(key, value);
-  }
-  url.searchParams.set("token", apiKey);
-
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), FINNHUB_TIMEOUT_MS);
-
-  try {
-    const res = await fetch(url.toString(), { signal: controller.signal });
-    if (!res.ok) {
-      return { error: `Finnhub request to ${path} failed (${res.status}).` };
-    }
-    return await res.json();
-  } catch (err) {
-    return {
-      error:
-        err instanceof Error
-          ? `Finnhub request to ${path} failed: ${err.message}`
-          : `Finnhub request to ${path} failed.`,
-    };
-  } finally {
-    clearTimeout(timeout);
-  }
-}
-
-async function getStockQuote(symbol: string) {
-  const data = await finnhubGet("/quote", { symbol: resolveFinnhubSymbol(symbol) });
-  if (data.error) return data;
-  if (data.c === 0 && data.h === 0 && data.l === 0) {
-    return { error: `No quote data found for symbol "${symbol}". It may be an invalid ticker.` };
-  }
-  return {
-    symbol,
-    price: data.c,
-    change: data.d,
-    changePercent: data.dp,
-    dayHigh: data.h,
-    dayLow: data.l,
-    dayOpen: data.o,
-    previousClose: data.pc,
-  };
-}
-
-async function getStockNews(symbol: string) {
-  const today = new Date();
-  const weekAgo = new Date(today);
-  weekAgo.setDate(today.getDate() - 7);
-
-  const data = await finnhubGet("/company-news", {
-    symbol,
-    from: weekAgo.toISOString().split("T")[0],
-    to: today.toISOString().split("T")[0],
-  });
-  if (data.error) return data;
-  if (!Array.isArray(data)) {
-    return { error: `No news data available for "${symbol}".` };
-  }
-  return data.slice(0, 5).map((item: { headline?: string; summary?: string; source?: string; datetime?: number }) => ({
-    headline: item.headline,
-    summary: item.summary,
-    source: item.source,
-    date: new Date((item.datetime ?? 0) * 1000).toISOString().split("T")[0],
-  }));
 }
 
 async function searchSymbol(query: string) {
@@ -340,32 +256,15 @@ async function getEarningsHistory(symbol: string) {
 }
 
 async function getMarketNews() {
-  const apiKey = process.env.FINNHUB_API_KEY;
-  if (!apiKey) return { error: "Finnhub API key is not configured on the server." };
-
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), FINNHUB_TIMEOUT_MS);
-  try {
-    const res = await fetch(
-      `${FINNHUB_BASE_URL}/news?category=general&token=${apiKey}`,
-      { signal: controller.signal }
-    );
-    if (!res.ok) return { error: `Finnhub general news request failed (${res.status}).` };
-    const data = await res.json();
-    if (!Array.isArray(data)) return { error: "No market news available." };
-    return data.slice(0, 8).map((item: { headline?: string; summary?: string; source?: string; datetime?: number }) => ({
-      headline: item.headline,
-      summary: item.summary,
-      source: item.source,
-      date: new Date((item.datetime ?? 0) * 1000).toISOString().split("T")[0],
-    }));
-  } catch (err) {
-    return {
-      error: err instanceof Error ? `Finnhub general news request failed: ${err.message}` : "Finnhub general news request failed.",
-    };
-  } finally {
-    clearTimeout(timeout);
-  }
+  const data = await finnhubGet("/news", { category: "general" });
+  if (data.error) return data;
+  if (!Array.isArray(data)) return { error: "No market news available." };
+  return data.slice(0, 8).map((item: { headline?: string; summary?: string; source?: string; datetime?: number }) => ({
+    headline: item.headline,
+    summary: item.summary,
+    source: item.source,
+    date: new Date((item.datetime ?? 0) * 1000).toISOString().split("T")[0],
+  }));
 }
 
 function extractStatementLines(

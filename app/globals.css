@@ -170,6 +170,21 @@
   transform-origin: top;
 }
 
+/* KrixLauncher's expanded panel - same spring-in/fast-out shape as
+   .modal-enter, but scaling from its own trigger (bottom-right corner)
+   rather than from center, per the popovers-scale-from-their-trigger
+   convention. Modals stay centered because they aren't anchored to a
+   trigger; this is anchored to the launcher button, so it isn't a modal. */
+.panel-enter {
+  animation: modal-in 0.25s var(--ease-spring);
+  transform-origin: bottom right;
+}
+
+.panel-enter[data-state="closing"] {
+  animation: modal-out 0.15s ease-out forwards;
+  transform-origin: bottom right;
+}
+
 /* Exit is faster than entry and skips the spring - "release should always
    be snappy," same as a button's press feedback. Higher specificity than
    the plain .overlay-enter/.modal-enter rules above (class + attribute),

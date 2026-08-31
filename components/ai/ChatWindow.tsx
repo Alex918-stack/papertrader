@@ -13,6 +13,25 @@ interface ChatWindowProps {
   onMessagesChange: (messages: StoredMessage[]) => void;
   greeting?: string;
   emptyStateAction?: { label: string; prompt: string; tutorialMode?: boolean };
+  /**
+   * Defaults to "tour-chat-input" - the id lib/tour.ts's "krix" beat
+   * anchors to on the /ai page. More than one ChatWindow can be mounted at
+   * once (KrixLauncher alongside TradingAssistant on /trading, say) -
+   * every instance other than the one the tour actually targets MUST pass
+   * a distinct id here, or two elements would share the same id and
+   * document.querySelector would resolve to whichever happens to be first
+   * in the DOM, not necessarily the real one.
+   */
+  inputId?: string;
+  /**
+   * Defaults to false (the fixed 65vh height every existing usage - /ai,
+   * TradingAssistant - relies on for a normal in-page layout). True makes
+   * this fill its parent instead, for a container that already owns its own
+   * height (KrixLauncher's fixed-size floating panel) - fighting the fixed
+   * height with an outer wrapper's CSS would be fragile (specificity ties
+   * between two independent utility classes on the same element).
+   */
+  fillHeight?: boolean;
 }
 
 const DEFAULT_GREETING =
@@ -23,6 +42,8 @@ export default function ChatWindow({
   onMessagesChange,
   greeting = DEFAULT_GREETING,
   emptyStateAction,
+  inputId = "tour-chat-input",
+  fillHeight = false,
 }: ChatWindowProps) {
   const { cash, holdings, transactions, buy, sell } = usePortfolio();
   const { showToast } = useToast();
@@ -185,7 +206,11 @@ ${recentTrades || "None yet"}`;
   }
 
   return (
-<div className="flex-1 flex flex-col h-[65vh] bg-white border border-neutral-200 rounded-lg overflow-hidden shadow-sm">
+    <div
+      className={`flex-1 flex flex-col bg-white overflow-hidden ${
+        fillHeight ? "h-full" : "h-[65vh] border border-neutral-200 rounded-lg shadow-sm"
+      }`}
+    >
       <div
         ref={scrollContainerRef}
         className="flex-1 overflow-y-auto thin-scrollbar p-6 space-y-5"
@@ -233,7 +258,7 @@ ${recentTrades || "None yet"}`;
 
       <div className="border-t border-neutral-200 p-4 flex gap-3">
         <textarea
-          id="tour-chat-input"
+          id={inputId}
           value={input}
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={handleKeyDown}

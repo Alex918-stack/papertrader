@@ -43,7 +43,7 @@ function buildThesisFromDraft(draft: ThesisFormValues): TradeThesis | undefined 
 
 // Shown instead of immediately executing whenever a proposed plan would
 // open one or more new positions - collects every required thesis first
-// (nothing executes until the final "Execute Plan" below), one trade at a
+// (nothing executes until the final "This is my plan" click below), one trade at a
 // time so "which trade, how many are left" is always answered on screen,
 // rather than a wall of forms with no context. Forward-only by design: no
 // back button to revise an earlier step - keeps this simple, matching
@@ -147,7 +147,13 @@ export default function TradePlanThesisModal({
               </div>
             )}
 
-            <ThesisForm value={draft} onChange={setDraft} isGuest={isGuest} />
+            <ThesisForm
+              value={draft}
+              onChange={setDraft}
+              isGuest={isGuest}
+              symbol={currentTrade.symbol}
+              contextHint={currentTrade.rationale}
+            />
 
             <div className="flex gap-2">
               <button
@@ -214,7 +220,7 @@ export default function TradePlanThesisModal({
                 disabled={finalTrades.length === 0}
                 className="flex-1 bg-coral-500 hover:bg-coral-600 active:scale-[0.97] disabled:bg-neutral-200 disabled:text-neutral-400 disabled:cursor-not-allowed text-white font-medium py-2 rounded-md transition-all duration-150 ease-out-quart text-sm"
               >
-                Execute Plan
+                This is my plan
               </button>
             </div>
           </>

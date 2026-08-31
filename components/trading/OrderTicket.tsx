@@ -55,6 +55,7 @@ const [shares, setShares] = useState(1);
   const currentHolding = holdings.find((h) => h.symbol === symbol);
   const isOpeningBuy = action === "BUY" && !currentHolding;
   const openEpisodeId = useOpenEpisodeId(symbol);
+  const hasThesisText = Boolean(thesis.whyThis.trim() || thesis.whyNow.trim() || thesis.invalidation.trim());
 
   const { quotes, loading, error } = useStockQuotes([symbol]);
   const currentPrice = quotes[symbol]?.price ?? 0;
@@ -92,6 +93,51 @@ const [shares, setShares] = useState(1);
   const selectedStock = ALL_ASSETS.find((s) => s.symbol === symbol);
   const isCrypto = selectedStock?.assetType === "crypto";
 
+  // Position sizing: a slider/preset input mechanism that only ever writes
+  // to the same `shares` state the number input already owns - there is no
+  // separate "percent" state to keep in sync, so there's nothing for the
+  // two controls to disagree about. The slider's displayed position is
+  // DERIVED from shares on every render (below), so typing a share count
+  // directly moves the slider for free, and the slider's own onChange just
+  // computes a new share count exactly the way typing would.
+  //
+  // Rounds down against the REAL fill price (computeExecutionPricing),
+  // not the raw quote - a buy's fill price is always quote plus spread and
+  // slippage, both adverse, so sizing off the raw quote alone could compute
+  // a share count whose honest total comes out a few cents over budget at
+  // the moment of confirm. This calls that same pricing function (imported,
+  // never modified) to verify, and backs off a unit at a time until the
+  // honest total actually fits - "Max" must never propose an order the
+  // confirm step then rejects as insufficient cash.
+  function maxAffordableShares(percentOfCash: number): number {
+    if (currentPrice <= 0 || cash <= 0) return 0;
+    const budget = (percentOfCash / 100) * cash;
+    const step = isCrypto ? 0.0001 : 1;
+    let candidate = isCrypto ? Math.floor(budget / currentPrice / step) * step : Math.floor(budget / currentPrice);
+    candidate = Math.max(0, candidate);
+
+    for (let i = 0; i < 100 && candidate > 0; i++) {
+      const pricing = computeExecutionPricing({
+        quotedPrice: currentPrice,
+        side: "BUY",
+        shares: candidate,
+        liquidity: { marketCap, avgDollarVolume20d },
+      });
+      if (candidate * pricing.fillPrice <= budget) break;
+      candidate = Math.max(0, Number((candidate - step).toFixed(4)));
+    }
+    return candidate;
+  }
+
+  // Percent-of-cash the CURRENT shares value represents, purely for display
+  // - a simple quoted-price estimate, not the fillPrice-aware search above.
+  // A slider thumb a pixel off from the exact honest percentage is not a
+  // correctness problem the way an unaffordable "Max" would be.
+  const sizingPercent =
+    currentPrice > 0 && cash > 0 ? Math.min(100, (shares * currentPrice * 100) / cash) : 0;
+
+  const SIZING_PRESETS = [25, 50, 75, 100];
+
 function selectStock(sym: string) {
     setSymbol(sym);
     setSearch("");
@@ -113,7 +159,7 @@ function handlePreview() {
 
   function buildThesis(): TradeThesis | undefined {
     if (isOpeningBuy) {
-      if (!thesis.whyThis.trim() && !thesis.whyNow.trim() && !thesis.invalidation.trim()) {
+      if (!hasThesisText) {
         return undefined; // nothing written - thesis is optional, so this is a normal, complete choice
       }
       const invalidationPrice = thesis.invalidationPrice.trim()
@@ -259,6 +305,42 @@ async function handleConfirm() {
         </div>
       </div>
 
+      {action === "BUY" && currentPrice > 0 && (
+        <div className="space-y-2">
+          <div className="flex items-center justify-between gap-2">
+            <label htmlFor="tour-sizing-slider" className="text-sm text-neutral-500">
+              Position size
+            </label>
+            <span className="num text-xs text-neutral-500">
+              ${formatMoney(shares * currentPrice)} · {sizingPercent.toFixed(0)}% of cash
+            </span>
+          </div>
+          <input
+            id="tour-sizing-slider"
+            type="range"
+            min={0}
+            max={100}
+            step={1}
+            value={sizingPercent}
+            onChange={(e) => setShares(maxAffordableShares(Number(e.target.value)))}
+            className="w-full accent-coral-500 cursor-pointer"
+            aria-label="Percent of available cash to deploy"
+          />
+          <div className="flex gap-2">
+            {SIZING_PRESETS.map((percent) => (
+              <button
+                key={percent}
+                type="button"
+                onClick={() => setShares(maxAffordableShares(percent))}
+                className="flex-1 text-xs font-medium text-neutral-600 bg-neutral-100 hover:bg-coral-50 hover:text-coral-700 rounded-full py-1.5 transition-colors"
+              >
+                {percent === 100 ? "Max" : `${percent}%`}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
       {isOpeningBuy ? (
         <div id="tour-thesis-form" className="space-y-1.5">
           <p className="text-xs text-neutral-500">
@@ -268,6 +350,7 @@ async function handleConfirm() {
             value={thesis}
             onChange={setThesis}
             isGuest={status !== "authenticated"}
+            symbol={symbol}
           />
         </div>
       ) : (
@@ -330,6 +413,7 @@ async function handleConfirm() {
         shares={shares}
         pricing={pricingPreview}
         isCrypto={isCrypto}
+        hasThesis={isOpeningBuy && hasThesisText}
         submitting={submitting}
         onConfirm={handleConfirm}
         onCancel={() => setConfirmOpen(false)}

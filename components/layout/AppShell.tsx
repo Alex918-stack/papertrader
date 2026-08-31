@@ -7,6 +7,7 @@ import Sidebar from "./Sidebar";
 import GuidedTour from "@/components/tour/GuidedTour";
 import TourPrompt from "@/components/tour/TourPrompt";
 import { TourProvider } from "@/components/tour/TourProvider";
+import KrixLauncher from "@/components/ai/KrixLauncher";
 
 interface AppShellProps {
   children: React.ReactNode;
@@ -63,6 +64,7 @@ export default function AppShell({ children }: AppShellProps) {
     <TourProvider>
       <div className="flex flex-col h-screen">
         <GuidedTour lenisRef={lenisRef} mainRef={mainRef} />
+        <KrixLauncher />
         <Navbar onToggleSidebar={handleToggleSidebar} />
         <div className="flex flex-1 overflow-hidden">
           <Sidebar

@@ -13,6 +13,14 @@ interface OrderConfirmModalProps {
   shares: number;
   pricing: ExecutionPricing | null;
   isCrypto?: boolean;
+  /**
+   * True when this is an opening buy with a thesis attached (drafted with
+   * Krix or hand-written - either way, this is the moment the user is
+   * actively confirming it). Swaps the confirm button's label to make
+   * authorship explicit: this executes the actual trade, and nothing before
+   * it does, whether the thesis fields were typed or drafted.
+   */
+  hasThesis?: boolean;
   submitting?: boolean;
   onConfirm: () => void;
   onCancel: () => void;
@@ -26,6 +34,7 @@ export default function OrderConfirmModal({
   shares,
   pricing,
   isCrypto = false,
+  hasThesis = false,
   submitting = false,
   onConfirm,
   onCancel,
@@ -89,7 +98,7 @@ export default function OrderConfirmModal({
             variant={isBuy ? "buy" : "sell"}
             className="flex-1"
           >
-            {submitting ? "Confirming..." : `Confirm ${isBuy ? "Buy" : "Sell"}`}
+            {submitting ? "Confirming..." : isBuy && hasThesis ? "This is my plan" : `Confirm ${isBuy ? "Buy" : "Sell"}`}
           </Button>
         </div>
       </div>
