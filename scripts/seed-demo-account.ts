@@ -589,7 +589,7 @@ async function main() {
           }
           const openIdx = windowDays.indexOf(openDate);
           const closeIdx = openIdx + holdDays;
-          if (closeIdx >= windowDays.length - 1) continue; // leave the reserved tail alone
+          if (closeIdx >= closedZoneLen) continue; // leave the reserved tail alone
           let closeDate: string;
           try {
             closeDate = resolveTradableDate(plan.symbol, closeIdx);
@@ -907,7 +907,11 @@ async function main() {
   }
 
   console.log("Updating portfolio cash...");
-  const { error: cashError } = await admin.from("portfolios").update({ cash: finalCash }).eq("id", portfolio.id);
+  const firstLegDate = pricedLegs.reduce((min, l) => (l.date < min ? l.date : min), pricedLegs[0].date);
+  const { error: cashError } = await admin
+    .from("portfolios")
+    .update({ cash: finalCash, benchmark_start_date: midDayTimestamp(firstLegDate, 0) })
+    .eq("id", portfolio.id);
   if (cashError) throw cashError;
 
   console.log(`\nDone. ${email} now has ${resolved.length} episodes (${CLOSED_EPISODES.length} closed, ${OPEN_EPISODES.length} open), cash $${finalCash.toFixed(2)}.`);
