@@ -89,7 +89,7 @@ export default function ScorecardPage() {
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <p className="text-xs text-neutral-400">Avg win</p>
-                    <p className="num text-xl font-bold text-green-700">
+                    <p className={`num text-xl font-bold ${value.avgWinPct !== null ? "text-green-700" : "text-neutral-400"}`}>
                       {value.avgWinPct !== null ? formatPct(value.avgWinPct) : "No wins yet"}
                     </p>
                   </div>
@@ -149,12 +149,24 @@ export default function ScorecardPage() {
                   )}
                 </div>
               </div>
-              {(result.holdingPeriods.winners.status !== "available" ||
-                result.holdingPeriods.losers.status !== "available") && (
-                <p className="text-xs text-neutral-400">
-                  Needs at least 5 closed winners and 5 closed losers, independently, before averaging either side.
-                </p>
-              )}
+              {(() => {
+                const winnersLocked = result.holdingPeriods.winners.status !== "available";
+                const losersLocked = result.holdingPeriods.losers.status !== "available";
+                if (winnersLocked && losersLocked) {
+                  return (
+                    <p className="text-xs text-neutral-400">
+                      Needs at least 5 closed winners and 5 closed losers, independently, before averaging either side.
+                    </p>
+                  );
+                }
+                if (winnersLocked) {
+                  return <p className="text-xs text-neutral-400">Needs at least 5 closed winners before averaging that side.</p>;
+                }
+                if (losersLocked) {
+                  return <p className="text-xs text-neutral-400">Needs at least 5 closed losers before averaging that side.</p>;
+                }
+                return null;
+              })()}
             </Card>
 
             <Card className="space-y-2">
