@@ -181,7 +181,15 @@ export default function ScorecardPage() {
                 <p className="text-sm text-neutral-500 mt-0.5">
                   Spent on add-ons and partial trims beyond your initial entry and final exit
                   {result.overTradingCost.percent.status === "available"
-                    ? ` - ${result.overTradingCost.percent.value.toFixed(2)}% of capital deployed.`
+                    ? ` - ${
+                        // A real dollar cost next to "0.00%" reads as a bug.
+                        // Anything that rounds to zero but isn't zero gets the
+                        // "<0.01%" treatment instead.
+                        result.overTradingCost.percent.value > 0 &&
+                        result.overTradingCost.percent.value < 0.005
+                          ? "<0.01"
+                          : result.overTradingCost.percent.value.toFixed(2)
+                      }% of capital deployed.`
                     : "."}
                 </p>
               </div>
